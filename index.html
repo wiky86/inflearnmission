@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>오늘 뭐 먹지? - AI 점심 메뉴 추천</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #FF6B35;
+            --primary-dark: #E5551F;
+            --secondary: #FFD166;
+            --accent: #06D6A0;
+            --dark: #1A1A2E;
+            --darker: #16213E;
+            --light: #FFF8F0;
+            --card-bg: #FFFFFF;
+            --text: #2D2D2D;
+            --text-light: #6B7280;
+            --shadow: 0 8px 32px rgba(255, 107, 53, 0.15);
+            --shadow-lg: 0 16px 48px rgba(255, 107, 53, 0.2);
+            --radius: 20px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background: var(--light);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary) 0%, #FF8C61 50%, var(--secondary) 100%);
+            padding: 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        header::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: var(--light);
+            border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+        }
+
+        .header-deco {
+            position: absolute;
+            font-size: 80px;
+            opacity: 0.15;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .header-deco:nth-child(1) { top: 20px; left: 5%; animation-delay: 0s; }
+        .header-deco:nth-child(2) { top: 60px; right: 8%; animation-delay: 1.5s; }
+        .header-deco:nth-child(3) { bottom: 80px; left: 15%; animation-delay: 3s; }
+        .header-deco:nth-child(4) { top: 30px; left: 45%; animation-delay: 0.8s; font-size: 60px; }
+        .header-deco:nth-child(5) { bottom: 100px; right: 20%; animation-delay: 2.2s; font-size: 50px; }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-15px) rotate(5deg); }
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            padding: 60px 20px 80px;
+        }
+
+        .logo {
+            font-family: 'Noto Sans KR', sans-serif;
+            font-weight: 800;
+            font-size: clamp(2.5rem, 7vw, 4.5rem);
+            color: #fff;
+            text-shadow: 2px 2px 0 rgba(0,0,0,0.1);
+            margin-bottom: 8px;
+            letter-spacing: -2px;
+        }
+
+        .logo span {
+            display: inline-block;
+            animation: bounce 0.6s ease;
+        }
+
+        @keyframes bounce {
+            0% { transform: translateY(-30px); opacity: 0; }
+            60% { transform: translateY(5px); }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+
+        .subtitle {
+            color: rgba(255,255,255,0.9);
+            font-size: 1.1rem;
+            font-weight: 300;
+            letter-spacing: 1px;
+        }
+
+        nav {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            padding: 0 20px;
+            margin-top: -30px;
+            position: relative;
+            z-index: 2;
+            flex-wrap: wrap;
+        }
+
+        .nav-pill {
+            background: var(--card-bg);
+            border: 2px solid transparent;
+            padding: 10px 22px;
+            border-radius: 50px;
+            font-family: 'Noto Sans KR', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: var(--text);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+            white-space: nowrap;
+        }
+
+        .nav-pill:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .nav-pill.active {
+            background: var(--primary);
+            color: #fff;
+            box-shadow: var(--shadow);
+        }
+
+        main {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px 60px;
+        }
+
+        .preference-section {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 32px;
+            margin-bottom: 32px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+            border: 1px solid rgba(0,0,0,0.04);
+        }
+
+        .preference-section h2 {
+            font-family: 'Noto Sans KR', sans-serif; font-weight: 700;
+            font-size: 1.4rem;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            letter-spacing: -0.5px;
+        }
+
+        .tag-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .tag {
+            padding: 10px 18px;
+            border-radius: 12px;
+            border: 2px solid #E5E7EB;
+            background: transparent;
+            font-family: 'Noto Sans KR', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 400;
+            color: var(--text);
+            cursor: pointer;
+            transition: all 0.25s ease;
+            user-select: none;
+        }
+
+        .tag:hover {
+            border-color: var(--primary);
+            background: rgba(255, 107, 53, 0.04);
+        }
+
+        .tag.selected {
+            border-color: var(--primary);
+            background: rgba(255, 107, 53, 0.08);
+            color: var(--primary);
+            font-weight: 500;
+        }
+
+        .generate-btn {
+            width: 100%;
+            padding: 20px;
+            border: none;
+            border-radius: 16px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: #fff;
+            font-family: 'Noto Sans KR', sans-serif; font-weight: 700;
+            font-size: 1.5rem;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 32px;
+        }
+
+        .generate-btn::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .generate-btn:hover::before { left: 100%; }
+        .generate-btn:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+        .generate-btn:active { transform: translateY(0); }
+        .generate-btn.loading { pointer-events: none; opacity: 0.85; }
+
+        .result-container { display: none; }
+        .result-container.show { display: block; animation: slideUp 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.08);
+            border: 1px solid rgba(0,0,0,0.04);
+        }
+
+        .result-header {
+            background: linear-gradient(135deg, var(--dark), var(--darker));
+            padding: 28px 32px;
+            color: #fff;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .result-header::after {
+            content: '';
+            position: absolute;
+            top: -50%; right: -30%;
+            width: 200px; height: 200px;
+            background: radial-gradient(circle, rgba(255, 107, 53, 0.2), transparent);
+            border-radius: 50%;
+        }
+
+        .result-badge {
+            display: inline-block;
+            background: var(--primary);
+            color: #fff;
+            padding: 4px 14px;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+        }
+
+        .result-menu-name {
+            font-family: 'Noto Sans KR', sans-serif; font-weight: 700;
+            font-size: clamp(2rem, 5vw, 2.8rem);
+            letter-spacing: -1px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .result-menu-emoji { font-size: 2.5rem; margin-left: 8px; }
+
+        .result-body { padding: 28px 32px; }
+
+        .result-desc {
+            font-size: 1.05rem;
+            line-height: 1.8;
+            color: var(--text-light);
+            margin-bottom: 24px;
+        }
+
+        .result-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .meta-item {
+            background: var(--light);
+            padding: 16px;
+            border-radius: 14px;
+            text-align: center;
+        }
+
+        .meta-label {
+            font-size: 0.75rem;
+            color: var(--text-light);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value { font-size: 1.15rem; font-weight: 700; color: var(--text); }
+
+        .result-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+
+        .result-tag {
+            background: rgba(6, 214, 160, 0.1);
+            color: #059669;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .result-tip {
+            background: linear-gradient(135deg, rgba(255, 209, 102, 0.15), rgba(255, 107, 53, 0.08));
+            border-left: 4px solid var(--secondary);
+            padding: 16px 20px;
+            border-radius: 0 12px 12px 0;
+            font-size: 0.9rem;
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .result-tip strong { color: var(--primary); }
+
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid #F3F4F6;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 14px;
+            border-radius: 12px;
+            border: 2px solid #E5E7EB;
+            background: transparent;
+            font-family: 'Noto Sans KR', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: var(--text);
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+
+        .action-btn:hover { border-color: var(--primary); color: var(--primary); background: rgba(255, 107, 53, 0.04); }
+
+        .action-btn.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+        .action-btn.primary:hover { background: var(--primary-dark); border-color: var(--primary-dark); color: #fff; transform: translateY(-2px); box-shadow: var(--shadow); }
+
+        .history-section { margin-top: 48px; }
+        .history-section h3 { font-family: 'Noto Sans KR', sans-serif; font-weight: 700; font-size: 1.2rem; margin-bottom: 16px; color: var(--text-light); }
+        .history-list { display: flex; flex-direction: column; gap: 8px; }
+
+        .history-item {
+            display: flex; align-items: center; justify-content: space-between;
+            background: var(--card-bg); padding: 14px 20px; border-radius: 12px;
+            border: 1px solid rgba(0,0,0,0.04); font-size: 0.9rem; transition: all 0.2s ease;
+        }
+        .history-item:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+        .history-item-name { font-weight: 500; }
+        .history-item-date { color: var(--text-light); font-size: 0.8rem; }
+
+        footer {
+            text-align: center; padding: 40px 20px; color: var(--text-light); font-size: 0.85rem;
+        }
+        footer a { color: var(--primary); text-decoration: none; font-weight: 500; }
+
+        .spinner {
+            display: inline-block; width: 24px; height: 24px;
+            border: 3px solid rgba(255,255,255,0.3); border-top-color: #fff;
+            border-radius: 50%; animation: spin 0.7s linear infinite;
+            vertical-align: middle; margin-right: 8px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .confetti-piece {
+            position: fixed; z-index: 10000; pointer-events: none;
+            animation: confettiFall 2s ease-in forwards;
+        }
+        @keyframes confettiFall {
+            0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        }
+
+        @media (max-width: 600px) {
+            .header-content { padding: 40px 16px 60px; }
+            .header-deco { font-size: 50px; }
+            .preference-section { padding: 24px 20px; }
+            .result-header { padding: 24px 20px; }
+            .result-body { padding: 24px 20px; }
+            .action-buttons { flex-direction: column; }
+            nav { gap: 6px; }
+            .nav-pill { padding: 8px 16px; font-size: 0.85rem; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <span class="header-deco">🍜</span>
+    <span class="header-deco">🍕</span>
+    <span class="header-deco">🍱</span>
+    <span class="header-deco">🌮</span>
+    <span class="header-deco">🍣</span>
+    <div class="header-content">
+        <h1 class="logo">오늘 뭐 먹지?</h1>
+        <p class="subtitle">매일 반복되는 메뉴 고민, 3초 만에 해결!</p>
+    </div>
+</header>
+
+<nav>
+    <button class="nav-pill active" data-meal="lunch">🍚 점심</button>
+    <button class="nav-pill" data-meal="dinner">🌙 저녁</button>
+    <button class="nav-pill" data-meal="snack">☕ 간식</button>
+    <button class="nav-pill" data-meal="late">🍻 야식</button>
+</nav>
+
+<main>
+    <div class="preference-section">
+        <h2>🎯 오늘의 기분</h2>
+        <div class="tag-group" id="moodTags">
+            <button class="tag" data-value="hearty">든든하게</button>
+            <button class="tag" data-value="light">가볍게</button>
+            <button class="tag" data-value="spicy">매콤하게</button>
+            <button class="tag" data-value="comfort">따뜻하게</button>
+            <button class="tag" data-value="cool">시원하게</button>
+            <button class="tag" data-value="special">특별하게</button>
+        </div>
+    </div>
+
+    <div class="preference-section">
+        <h2>💰 예산</h2>
+        <div class="tag-group" id="budgetTags">
+            <button class="tag" data-value="cheap">~8,000원</button>
+            <button class="tag" data-value="mid">8,000~15,000원</button>
+            <button class="tag" data-value="high">15,000원~</button>
+            <button class="tag" data-value="any">상관없음</button>
+        </div>
+    </div>
+
+    <div class="preference-section">
+        <h2>👥 함께 먹는 사람</h2>
+        <div class="tag-group" id="peopleTags">
+            <button class="tag" data-value="alone">혼밥</button>
+            <button class="tag" data-value="colleague">동료와</button>
+            <button class="tag" data-value="date">연인과</button>
+            <button class="tag" data-value="group">단체 (4인+)</button>
+        </div>
+    </div>
+
+    <button class="generate-btn" id="generateBtn" onclick="recommend()">
+        🎰 메뉴 뽑기!
+    </button>
+
+    <div class="result-container" id="resultContainer">
+        <div class="result-card">
+            <div class="result-header">
+                <div class="result-badge" id="resultBadge">AI 추천</div>
+                <div class="result-menu-name">
+                    <span id="resultName">-</span>
+                    <span class="result-menu-emoji" id="resultEmoji"></span>
+                </div>
+            </div>
+            <div class="result-body">
+                <p class="result-desc" id="resultDesc"></p>
+                <div class="result-meta" id="resultMeta"></div>
+                <div class="result-tags" id="resultTags"></div>
+                <div class="result-tip" id="resultTip"></div>
+                <div class="action-buttons">
+                    <button class="action-btn" onclick="recommend()">🔄 다시 뽑기</button>
+                    <button class="action-btn" onclick="saveHistory()">💾 저장</button>
+                    <button class="action-btn primary" onclick="shareResult()">📤 공유하기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="history-section" id="historySection" style="display:none;">
+        <h3>📋 최근 추천 기록</h3>
+        <div class="history-list" id="historyList"></div>
+    </div>
+</main>
+
+<footer>
+    <p>만든 사람: 인프런 수강생 · 비개발자 4주 만에 수익화 서비스 만들기</p>
+    <p style="margin-top:6px;">© 2026 오늘 뭐 먹지? · All rights reserved</p>
+</footer>
+
+<script>
+const menuDB = {
+    lunch: {
+        hearty: [
+            { name: "돼지갈비 정식", emoji: "🥩", desc: "숯불에 구운 양념 돼지갈비와 7가지 반찬이 함께 나오는 든든한 한 상! 밥 한 그릇이 순삭됩니다.", price: "12,000~16,000원", cal: "약 850kcal", time: "15~20분", tags: ["한식","고기","밥"], tip: "💡 점심특선이 있는 곳을 찾으면 저녁 가격 대비 30% 이상 저렴해요!" },
+            { name: "제육볶음 백반", emoji: "🌶️", desc: "고추장 양념에 볶은 돼지고기와 함께 먹는 집밥 스타일 백반. 가성비의 정석입니다.", price: "8,000~10,000원", cal: "약 750kcal", time: "10분", tags: ["한식","매콤","가성비"], tip: "💡 계란프라이 추가하면 행복 2배! 대부분 500원이면 추가 가능해요." },
+            { name: "순대국밥", emoji: "🍲", desc: "뜨끈한 국물에 순대와 내장이 푸짐하게 들어간 국밥. 소주도 찰떡궁합!", price: "8,000~10,000원", cal: "약 680kcal", time: "5분", tags: ["한식","국물","속풀이"], tip: "💡 밥을 말아 먹어도, 따로 먹어도 맛있어요. 새우젓은 필수!" },
+        ],
+        light: [
+            { name: "포케 보울", emoji: "🥗", desc: "신선한 연어와 아보카도, 각종 채소가 밥 위에 올라간 하와이안 건강식. 오후에도 가볍고 개운해요.", price: "12,000~15,000원", cal: "약 450kcal", time: "5분", tags: ["건강식","샐러드","다이어트"], tip: "💡 토핑 추가보다 베이스를 현미밥으로 바꾸면 더 건강해져요!" },
+            { name: "베트남 쌀국수", emoji: "🍜", desc: "맑고 깊은 국물에 쫄깃한 쌀면과 얇게 썬 소고기가 어우러진 한 그릇. 뒤끝이 깔끔합니다.", price: "9,000~12,000원", cal: "약 400kcal", time: "10분", tags: ["베트남","국물","깔끔"], tip: "💡 숙주, 고수, 라임을 듬뿍 넣으면 현지 맛에 가까워져요!" },
+            { name: "소바 정식", emoji: "🍶", desc: "차가운 쯔유에 적시는 메밀소바와 미니 덮밥 세트. 여름이 아니어도 맛있어요.", price: "10,000~13,000원", cal: "약 380kcal", time: "10분", tags: ["일식","면","깔끔"], tip: "💡 와사비를 쯔유에 풀지 말고 소바 위에 올려 먹으면 향이 살아요!" },
+        ],
+        spicy: [
+            { name: "마라탕", emoji: "🌶️", desc: "원하는 재료를 골라 담고 얼얼한 마라 소스에 끓여 먹는 중독성 만점 요리. 한 번 빠지면 매주 생각나요.", price: "10,000~15,000원", cal: "약 600kcal", time: "15분", tags: ["중식","매운맛","커스텀"], tip: "💡 쏸차이(절인 채소)랑 두부피는 꼭 넣으세요. 가성비 킹!" },
+            { name: "낙곱새", emoji: "🐙", desc: "낙지, 곱창, 새우가 한 냄비에! 매콤한 양념과 함께 끓이면 그 자리에서 밥 두 그릇은 기본입니다.", price: "15,000~20,000원", cal: "약 700kcal", time: "20분", tags: ["한식","해물","단체"], tip: "💡 볶음밥으로 마무리하는 건 국룰! 치즈 추가는 선택이 아닌 필수." },
+            { name: "엽기떡볶이", emoji: "🔥", desc: "달콤 매콤한 소스에 쫄깃한 떡과 어묵, 튀김까지. 학생부터 직장인까지 사랑받는 국민 매운맛.", price: "6,000~10,000원", cal: "약 550kcal", time: "5분", tags: ["분식","매운맛","가성비"], tip: "💡 매운맛 단계는 '덜 매운맛'부터 시작하세요. 겸손이 필요한 순간!" },
+        ],
+        comfort: [
+            { name: "김치찌개", emoji: "🍲", desc: "잘 익은 김치와 돼지고기, 두부가 보글보글 끓는 대한민국 소울푸드. 생각날 때 안 먹으면 하루가 아쉬워요.", price: "7,000~9,000원", cal: "약 500kcal", time: "8분", tags: ["한식","국물","소울푸드"], tip: "💡 참치김치찌개 vs 돼지고기김치찌개, 오늘은 어떤 쪽인가요?" },
+            { name: "된장찌개 백반", emoji: "🫕", desc: "구수한 된장에 호박, 두부, 감자가 들어간 건강한 한 끼. 엄마가 해준 밥이 생각나는 맛이에요.", price: "7,000~9,000원", cal: "약 450kcal", time: "8분", tags: ["한식","집밥","건강"], tip: "💡 청양고추 하나 송송 썰어 넣으면 감칠맛이 확 올라가요!" },
+            { name: "우동", emoji: "🍜", desc: "따끈한 가쓰오부시 국물에 통통한 면발을 후루룩. 추운 날, 지친 날에 위로가 되는 한 그릇.", price: "7,000~10,000원", cal: "약 420kcal", time: "5분", tags: ["일식","국물","간편"], tip: "💡 유부와 튀김을 곁들이면 완벽한 한 끼가 됩니다!" },
+        ],
+        cool: [
+            { name: "냉모밀", emoji: "🧊", desc: "차가운 쯔유에 적셔 먹는 쫄깃한 메밀면. 시원하고 깔끔한 맛이 점심 후 졸음을 날려줘요.", price: "9,000~12,000원", cal: "약 350kcal", time: "5분", tags: ["일식","시원","가벼움"], tip: "💡 면을 한 번에 많이 집지 말고, 소량씩 쯔유에 담그세요!" },
+            { name: "물냉면", emoji: "🍜", desc: "시원한 육수에 쫄깃한 냉면 사리, 달걀 반쪽과 배 한 조각. 한국 여름의 정수입니다.", price: "9,000~12,000원", cal: "약 450kcal", time: "5분", tags: ["한식","시원","면"], tip: "💡 식초와 겨자를 넣기 전에 먼저 육수 맛을 한 모금 느껴보세요!" },
+            { name: "회덮밥", emoji: "🐟", desc: "싱싱한 모둠 회에 초고추장, 참기름, 깻잎까지 비벼 먹는 시원한 한 그릇.", price: "10,000~14,000원", cal: "약 400kcal", time: "5분", tags: ["한식","해산물","시원"], tip: "💡 참기름을 넉넉히 넣고 비비면 고소함이 배가 돼요!" },
+        ],
+        special: [
+            { name: "오마카세", emoji: "🍣", desc: "셰프가 엄선한 제철 재료로 코스 요리를 즐기는 특별한 경험. 자신을 위한 작은 사치!", price: "30,000원~", cal: "약 600kcal", time: "60분+", tags: ["일식","코스","특별"], tip: "💡 런치 오마카세는 디너의 절반 가격인 곳이 많아요. 미리 예약 필수!" },
+            { name: "스테이크 런치", emoji: "🥩", desc: "미디엄 레어로 구운 스테이크와 가니시, 샐러드가 포함된 양식 코스. 특별한 점심에 딱!", price: "20,000~35,000원", cal: "약 800kcal", time: "30~40분", tags: ["양식","고기","데이트"], tip: "💡 런치 세트는 수프+샐러드+스테이크 구성이 대부분. 디너보다 훨씬 합리적!" },
+            { name: "딤섬 세트", emoji: "🥟", desc: "샤오롱바오, 하가우, 슈마이 등 다양한 딤섬을 작은 접시에 담아 즐기는 광동식 브런치.", price: "15,000~25,000원", cal: "약 550kcal", time: "20분", tags: ["중식","브런치","다양"], tip: "💡 2~3명이 함께 가면 더 다양한 종류를 맛볼 수 있어요!" },
+        ],
+    },
+    dinner: {
+        hearty: [
+            { name: "삼겹살", emoji: "🥓", desc: "두툼한 삼겹살을 불판에 구워 쌈 싸 먹는 한국인의 영혼 메뉴. 소주와 함께하면 피로가 녹아요.", price: "15,000~20,000원", cal: "약 900kcal", time: "30분", tags: ["한식","고기","회식"], tip: "💡 구운 김치, 된장, 파절이는 삼겹살의 삼신기. 꼭 함께하세요!" },
+            { name: "치킨", emoji: "🍗", desc: "바삭한 후라이드부터 양념, 간장, 마늘까지. 대한민국이 사랑하는 국민 야식 겸 저녁.", price: "18,000~22,000원", cal: "약 800kcal", time: "배달 30분", tags: ["치킨","배달","맥주"], tip: "💡 반반 치킨으로 두 가지 맛을 동시에! 무 피클은 필수 동반자." },
+        ],
+        light: [
+            { name: "샤브샤브", emoji: "🍲", desc: "얇게 썬 소고기와 신선한 채소를 맑은 육수에 살살 데쳐 먹는 깔끔한 저녁.", price: "15,000~22,000원", cal: "약 400kcal", time: "30분", tags: ["일식","건강","데이트"], tip: "💡 마지막에 칼국수나 죽으로 마무리하면 완벽한 코스!" },
+        ],
+        spicy: [
+            { name: "닭볶음탕", emoji: "🐔", desc: "감자, 당근, 떡과 함께 매콤하게 조린 닭볶음탕. 국물까지 밥 비벼 먹으면 최고!", price: "25,000~35,000원(2~3인)", cal: "약 650kcal", time: "25분", tags: ["한식","매운맛","단체"], tip: "💡 당면을 추가하면 국물 흡수력 만렙! 가성비도 올라가요." },
+        ],
+        comfort: [
+            { name: "수제비", emoji: "🫕", desc: "쫄깃하고 두툼한 수제비를 감자와 호박이 들어간 시원한 국물과 함께.", price: "8,000~10,000원", cal: "약 450kcal", time: "15분", tags: ["한식","국물","집밥"], tip: "💡 김치를 곁들이면 심심한 국물이 확 살아나요!" },
+        ],
+        cool: [
+            { name: "초밥 세트", emoji: "🍣", desc: "신선한 생선이 올라간 초밥 세트. 가볍지만 만족스러운 저녁을 원할 때 딱이에요.", price: "15,000~25,000원", cal: "약 500kcal", time: "10분", tags: ["일식","해산물","깔끔"], tip: "💡 가리, 연어, 새우가 기본! 성게와 참치뱃살은 보너스 행복." },
+        ],
+        special: [
+            { name: "와인 파스타 코스", emoji: "🍷", desc: "에피타이저부터 파스타, 디저트까지 와인과 함께 즐기는 이탈리안 코스 디너.", price: "30,000~50,000원", cal: "약 900kcal", time: "60분+", tags: ["양식","코스","데이트"], tip: "💡 하우스 와인이 가성비 좋아요. 소믈리에에게 음식 매칭을 물어보세요!" },
+        ],
+    },
+    snack: {
+        hearty: [
+            { name: "토스트 & 아메리카노", emoji: "☕", desc: "바삭한 토스트에 잼이나 아보카도를 올리고, 한 잔의 커피와 함께하는 오후 충전 타임.", price: "5,000~8,000원", cal: "약 350kcal", time: "5분", tags: ["카페","간식","충전"], tip: "💡 에그 토스트 + 아이스 아메리카노 조합은 진리!" },
+        ],
+        light: [
+            { name: "그릭 요거트 보울", emoji: "🥣", desc: "진한 그릭 요거트에 그래놀라, 과일, 꿀을 올린 건강 간식. 달콤하지만 죄책감 제로.", price: "6,000~9,000원", cal: "약 250kcal", time: "3분", tags: ["건강","디저트","가벼움"], tip: "💡 블루베리 + 그래놀라 + 꿀 한 줄이 황금 조합이에요!" },
+        ],
+        spicy: [
+            { name: "떡볶이", emoji: "🌶️", desc: "고추장 양념에 졸인 쫄깃한 떡볶이. 오후 3시의 허기를 매콤하게 달래줍니다.", price: "4,000~6,000원", cal: "약 400kcal", time: "5분", tags: ["분식","매운맛","간식"], tip: "💡 튀김이랑 순대도 같이 시키면 분식 풀코스! 1만원 이내 해결." },
+        ],
+        comfort: [
+            { name: "붕어빵 & 호떡", emoji: "🐟", desc: "겨울 거리의 따끈한 친구들. 팥붕어빵의 달콤함, 호떡의 고소함 중 오늘의 선택은?", price: "1,000~3,000원", cal: "약 200kcal", time: "1분", tags: ["길거리","겨울","저렴"], tip: "💡 붕어빵은 꼬리부터? 머리부터? 취향을 존중합니다 😄" },
+        ],
+        cool: [
+            { name: "빙수", emoji: "🍧", desc: "곱게 간 우유 얼음 위에 팥, 떡, 과일이 올라간 여름의 왕. 더운 날엔 생각만 해도 시원!", price: "10,000~16,000원", cal: "약 450kcal", time: "5분", tags: ["디저트","시원","카페"], tip: "💡 2인이서 나눠 먹으면 양도 적당하고 부담도 없어요!" },
+        ],
+        special: [
+            { name: "수제 마카롱 세트", emoji: "🧁", desc: "알록달록 예쁜 마카롱을 세트로 즐기는 특별한 간식 타임. 선물용으로도 최고!", price: "12,000~18,000원", cal: "약 300kcal", time: "바로", tags: ["디저트","선물","특별"], tip: "💡 뚱카롱(뚱뚱한 마카롱)은 필링이 가득! SNS 인증 필수 아이템." },
+        ],
+    },
+    late: {
+        hearty: [
+            { name: "족발", emoji: "🐷", desc: "쫀득한 족발에 새우젓, 쌈장 찍어 쌈 싸 먹기. 야식계의 든든한 존재감.", price: "30,000~40,000원", cal: "약 800kcal", time: "배달 40분", tags: ["한식","안주","배달"], tip: "💡 소 사이즈도 혼자 먹기엔 충분해요. 막국수 세트 추천!" },
+        ],
+        light: [
+            { name: "컵라면 + 삼각김밥", emoji: "🍜", desc: "편의점에서 3분 만에 완성하는 국민 야식. 간단하지만 이상하게 밤에 더 맛있어요.", price: "3,000~4,000원", cal: "약 500kcal", time: "3분", tags: ["편의점","간편","저렴"], tip: "💡 삼각김밥을 라면에 넣어 먹으면 새로운 세계가 열려요!" },
+        ],
+        spicy: [
+            { name: "불닭볶음면", emoji: "🔥", desc: "자극적이고 매운 맛이 땡길 때 불닭볶음면 한 봉지. 치즈 한 장이면 완벽한 밸런스.", price: "2,000원", cal: "약 530kcal", time: "5분", tags: ["라면","매운맛","자취"], tip: "💡 계란 하나 풀어 넣고 참기름 한 방울이면 레스토랑급(?)" },
+        ],
+        comfort: [
+            { name: "라면", emoji: "🍜", desc: "진리의 야식. 라면 하나면 하루의 피로가 풀리는 마법 같은 한 그릇입니다.", price: "1,500~2,000원", cal: "약 500kcal", time: "5분", tags: ["라면","야식","소울푸드"], tip: "💡 파 송송 + 계란 + 밥 한 숟갈 = 야식 끝판왕 조합!" },
+        ],
+        cool: [
+            { name: "맥주 + 치킨", emoji: "🍺", desc: "퇴근 후 시원한 맥주 한 잔과 바삭한 치킨. 일명 '치맥'은 한국 야식 문화의 아이콘!", price: "25,000~30,000원", cal: "약 900kcal", time: "배달 30분", tags: ["치킨","맥주","야식"], tip: "💡 치킨은 시킨 지 30분 안에 먹는 게 맛의 정점이에요!" },
+        ],
+        special: [
+            { name: "곱창 볶음", emoji: "✨", desc: "불판에 볶아 먹는 탱글탱글한 곱창. 특별한 밤에 어울리는 야식 중의 야식!", price: "20,000~30,000원", cal: "약 700kcal", time: "20분", tags: ["한식","안주","특별"], tip: "💡 소금구이로 시작해서 양념구이로 마무리! 볶음밥까지가 정석." },
+        ],
+    },
+};
+
+let currentMeal = 'lunch';
+let selectedMood = null;
+let selectedBudget = null;
+let selectedPeople = null;
+let lastResult = null;
+let history = [];
+
+document.querySelectorAll('.nav-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+        document.querySelectorAll('.nav-pill').forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+        currentMeal = pill.dataset.meal;
+    });
+});
+
+function setupTagGroup(groupId, setter) {
+    document.querySelectorAll(`#${groupId} .tag`).forEach(tag => {
+        tag.addEventListener('click', () => {
+            document.querySelectorAll(`#${groupId} .tag`).forEach(t => t.classList.remove('selected'));
+            tag.classList.add('selected');
+            setter(tag.dataset.value);
+        });
+    });
+}
+
+setupTagGroup('moodTags', v => selectedMood = v);
+setupTagGroup('budgetTags', v => selectedBudget = v);
+setupTagGroup('peopleTags', v => selectedPeople = v);
+
+function recommend() {
+    const btn = document.getElementById('generateBtn');
+    const mood = selectedMood || ['hearty','light','spicy','comfort','cool','special'][Math.floor(Math.random()*6)];
+    const mealData = menuDB[currentMeal];
+    const moodOptions = mealData[mood] || mealData['hearty'];
+    let candidates = [...moodOptions];
+    const pick = candidates[Math.floor(Math.random() * candidates.length)];
+
+    btn.classList.add('loading');
+    btn.innerHTML = '<span class="spinner"></span> 고민 중...';
+
+    setTimeout(() => {
+        btn.classList.remove('loading');
+        btn.innerHTML = '🎰 메뉴 뽑기!';
+        showResult(pick);
+        launchConfetti();
+    }, 1200);
+}
+
+function showResult(menu) {
+    lastResult = menu;
+    const container = document.getElementById('resultContainer');
+    const mealLabels = { lunch: '점심 추천', dinner: '저녁 추천', snack: '간식 추천', late: '야식 추천' };
+
+    document.getElementById('resultBadge').textContent = mealLabels[currentMeal] || 'AI 추천';
+    document.getElementById('resultName').textContent = menu.name;
+    document.getElementById('resultEmoji').textContent = menu.emoji;
+    document.getElementById('resultDesc').textContent = menu.desc;
+
+    document.getElementById('resultMeta').innerHTML = `
+        <div class="meta-item"><div class="meta-label">예상 가격</div><div class="meta-value">${menu.price}</div></div>
+        <div class="meta-item"><div class="meta-label">칼로리</div><div class="meta-value">${menu.cal}</div></div>
+        <div class="meta-item"><div class="meta-label">예상 소요</div><div class="meta-value">${menu.time}</div></div>
+    `;
+
+    document.getElementById('resultTags').innerHTML = menu.tags.map(t => `<span class="result-tag">#${t}</span>`).join('');
+    document.getElementById('resultTip').innerHTML = menu.tip;
+
+    container.classList.remove('show');
+    void container.offsetWidth;
+    container.classList.add('show');
+    container.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function launchConfetti() {
+    const colors = ['#FF6B35','#FFD166','#06D6A0','#118AB2','#EF476F'];
+    for (let i = 0; i < 30; i++) {
+        const piece = document.createElement('div');
+        piece.className = 'confetti-piece';
+        piece.style.left = Math.random() * 100 + 'vw';
+        piece.style.top = '-10px';
+        piece.style.width = (Math.random() * 8 + 4) + 'px';
+        piece.style.height = (Math.random() * 8 + 4) + 'px';
+        piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+        piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+        piece.style.animationDuration = (Math.random() * 1.5 + 1) + 's';
+        piece.style.animationDelay = (Math.random() * 0.5) + 's';
+        document.body.appendChild(piece);
+        setTimeout(() => piece.remove(), 3000);
+    }
+}
+
+function saveHistory() {
+    if (!lastResult) return;
+    const now = new Date();
+    const timeStr = `${now.getMonth()+1}/${now.getDate()} ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`;
+    history.unshift({ name: lastResult.name, emoji: lastResult.emoji, date: timeStr });
+    if (history.length > 10) history.pop();
+    renderHistory();
+    const btn = event.target;
+    const original = btn.textContent;
+    btn.textContent = '✅ 저장됨!';
+    setTimeout(() => btn.textContent = original, 1200);
+}
+
+function renderHistory() {
+    const section = document.getElementById('historySection');
+    const list = document.getElementById('historyList');
+    if (history.length === 0) { section.style.display = 'none'; return; }
+    section.style.display = 'block';
+    list.innerHTML = history.map(h =>
+        `<div class="history-item"><span class="history-item-name">${h.emoji} ${h.name}</span><span class="history-item-date">${h.date}</span></div>`
+    ).join('');
+}
+
+function shareResult() {
+    if (!lastResult) return;
+    const text = `🍽️ 오늘의 추천 메뉴: ${lastResult.emoji} ${lastResult.name}\n${lastResult.desc}\n\n👉 나도 추천받기: ${window.location.href}`;
+    if (navigator.share) {
+        navigator.share({ title: '오늘 뭐 먹지?', text: text }).catch(() => {});
+    } else {
+        navigator.clipboard.writeText(text).then(() => {
+            alert('클립보드에 복사되었습니다! 친구에게 공유해 보세요 😄');
+        }).catch(() => {
+            prompt('아래 텍스트를 복사해서 공유하세요:', text);
+        });
+    }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    const logo = document.querySelector('.logo');
+    const chars = logo.textContent.split('');
+    logo.innerHTML = chars.map((c, i) =>
+        `<span style="animation-delay:${i * 0.06}s">${c === ' ' ? '&nbsp;' : c}</span>`
+    ).join('');
+});
+</script>
+</body>
+</html>
