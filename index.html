@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>같이먹자 - 그룹 메뉴 투표</title>
+    <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --orange: #FF5722;
+            --orange-light: #FF8A65;
+            --orange-bg: rgba(255,87,34,0.06);
+            --green: #00C853;
+            --green-bg: rgba(0,200,83,0.08);
+            --red: #FF1744;
+            --red-bg: rgba(255,23,68,0.06);
+            --yellow: #FFD600;
+            --blue: #2979FF;
+            --dark: #1B1B1F;
+            --dark2: #232328;
+            --dark3: #3A3A40;
+            --text: #F5F5F5;
+            --text2: #A0A0A8;
+            --text3: #6E6E78;
+            --card: #232328;
+            --card-hover: #2A2A30;
+            --border: rgba(255,255,255,0.06);
+            --radius: 16px;
+            --radius-sm: 10px;
+            --radius-xs: 6px;
+            --shadow: 0 4px 24px rgba(0,0,0,0.3);
+            --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background: var(--dark);
+            color: var(--text);
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container { max-width: 520px; margin: 0 auto; padding: 0 16px; }
+
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 14px 28px; border: none; border-radius: var(--radius-sm);
+            font-family: 'Noto Sans KR', sans-serif; font-size: 0.95rem; font-weight: 600;
+            cursor: pointer; transition: var(--transition); user-select: none;
+        }
+        .btn-primary { background: var(--orange); color: #fff; }
+        .btn-primary:hover { background: #E64A19; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(255,87,34,0.35); }
+        .btn-secondary { background: var(--card); color: var(--text); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: var(--card-hover); border-color: rgba(255,255,255,0.12); }
+        .btn-full { width: 100%; }
+        .btn-lg { padding: 18px 32px; font-size: 1.1rem; border-radius: var(--radius); }
+
+        .topbar {
+            position: sticky; top: 0; z-index: 100;
+            background: rgba(27,27,31,0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border); padding: 14px 0;
+        }
+        .topbar-inner { display: flex; align-items: center; justify-content: space-between; }
+        .topbar-brand {
+            font-family: 'Black Han Sans', sans-serif; font-size: 1.3rem;
+            background: linear-gradient(135deg, var(--orange), var(--yellow));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text; letter-spacing: -0.5px; cursor: pointer;
+        }
+        .topbar-badge {
+            background: var(--dark2); color: var(--text2); font-size: 0.72rem; font-weight: 600;
+            padding: 4px 10px; border-radius: 50px; letter-spacing: 0.5px;
+        }
+
+        .screen { display: none; padding: 24px 0 60px; animation: fadeUp 0.35s ease; }
+        .screen.active { display: block; }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .hero { text-align: center; padding: 60px 0 40px; }
+        .hero-emoji { font-size: 4rem; margin-bottom: 16px; display: block; animation: wiggle 2s ease-in-out infinite; }
+        @keyframes wiggle { 0%,100% { transform: rotate(0deg); } 25% { transform: rotate(-8deg); } 75% { transform: rotate(8deg); } }
+        .hero h1 {
+            font-family: 'Black Han Sans', sans-serif; font-size: clamp(2rem, 8vw, 3rem);
+            letter-spacing: -1px; margin-bottom: 12px;
+            background: linear-gradient(135deg, #fff 30%, var(--orange-light));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .hero p { color: var(--text2); font-size: 1rem; line-height: 1.7; }
+
+        .home-actions { display: flex; flex-direction: column; gap: 12px; margin-top: 36px; }
+        .home-divider { display: flex; align-items: center; gap: 16px; margin: 28px 0; color: var(--text3); font-size: 0.8rem; }
+        .home-divider::before, .home-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+        .join-input-group { display: flex; gap: 8px; }
+        .join-input-group input {
+            flex: 1; padding: 14px 16px; border-radius: var(--radius-sm);
+            border: 1px solid var(--border); background: var(--card); color: var(--text);
+            font-family: 'Noto Sans KR', sans-serif; font-size: 0.95rem; outline: none; transition: var(--transition);
+        }
+        .join-input-group input:focus { border-color: var(--orange); background: var(--card-hover); }
+        .join-input-group input::placeholder { color: var(--text3); }
+
+        .section-title {
+            font-weight: 700; font-size: 0.82rem; color: var(--text3);
+            text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 14px;
+        }
+
+        .card {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 24px; margin-bottom: 16px;
+        }
+
+        .form-group { margin-bottom: 22px; }
+        .form-label { display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 8px; color: var(--text); }
+        .form-label small { font-weight: 400; color: var(--text3); margin-left: 6px; }
+        .form-input, .form-select, .form-textarea {
+            width: 100%; padding: 13px 16px; border-radius: var(--radius-sm);
+            border: 1px solid var(--border); background: var(--dark2); color: var(--text);
+            font-family: 'Noto Sans KR', sans-serif; font-size: 0.92rem; outline: none; transition: var(--transition);
+        }
+        .form-input:focus, .form-select:focus { border-color: var(--orange); background: var(--dark); }
+        .form-select {
+            appearance: none; cursor: pointer;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23A0A0A8' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat; background-position: right 14px center;
+        }
+        .form-select option { background: var(--dark2); }
+        .form-hint { font-size: 0.78rem; color: var(--text3); margin-top: 6px; }
+
+        .chip-group { display: flex; flex-wrap: wrap; gap: 8px; }
+        .chip {
+            padding: 8px 16px; border-radius: 50px; border: 1px solid var(--border);
+            background: transparent; color: var(--text2); font-family: 'Noto Sans KR', sans-serif;
+            font-size: 0.85rem; cursor: pointer; transition: var(--transition); user-select: none;
+        }
+        .chip:hover { border-color: rgba(255,255,255,0.15); color: var(--text); }
+        .chip.selected { border-color: var(--orange); color: var(--orange); background: var(--orange-bg); }
+
+        .room-header { text-align: center; padding: 32px 0 8px; }
+        .room-name { font-family: 'Black Han Sans', sans-serif; font-size: 1.6rem; letter-spacing: -0.5px; }
+        .room-info { display: flex; justify-content: center; gap: 16px; margin-top: 10px; color: var(--text2); font-size: 0.82rem; }
+        .room-info span { display: flex; align-items: center; gap: 4px; }
+
+        .room-code-bar {
+            display: flex; align-items: center; gap: 8px; margin: 20px 0 28px;
+            background: var(--dark2); border-radius: var(--radius-sm); padding: 10px 16px;
+        }
+        .room-code-bar code { flex: 1; font-size: 0.85rem; color: var(--orange-light); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .room-code-bar button {
+            background: none; border: none; color: var(--text2); cursor: pointer;
+            font-size: 0.8rem; font-family: 'Noto Sans KR', sans-serif; font-weight: 500;
+            padding: 4px 10px; border-radius: var(--radius-xs); transition: var(--transition);
+        }
+        .room-code-bar button:hover { background: var(--dark3); color: var(--text); }
+
+        .participants-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding: 0 2px; }
+        .participants-avatars { display: flex; align-items: center; }
+        .avatar {
+            width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 0.75rem; font-weight: 700; color: #fff; border: 2px solid var(--dark); margin-left: -6px; position: relative;
+        }
+        .avatar:first-child { margin-left: 0; }
+        .participant-count { font-size: 0.82rem; color: var(--text2); }
+
+        .nickname-overlay {
+            display: none; position: fixed; inset: 0; z-index: 200;
+            background: rgba(0,0,0,0.7); backdrop-filter: blur(8px);
+            align-items: center; justify-content: center; padding: 20px;
+        }
+        .nickname-overlay.show { display: flex; }
+        .nickname-modal {
+            background: var(--card); border-radius: var(--radius); padding: 32px;
+            width: 100%; max-width: 380px; text-align: center; animation: fadeUp 0.3s ease;
+        }
+        .nickname-modal h2 { font-size: 1.2rem; margin-bottom: 6px; }
+        .nickname-modal p { color: var(--text2); font-size: 0.85rem; margin-bottom: 20px; }
+        .nickname-modal input {
+            width: 100%; padding: 14px 16px; border-radius: var(--radius-sm);
+            border: 1px solid var(--border); background: var(--dark2); color: var(--text);
+            font-family: 'Noto Sans KR', sans-serif; font-size: 1rem; text-align: center;
+            outline: none; margin-bottom: 16px;
+        }
+        .nickname-modal input:focus { border-color: var(--orange); }
+
+        .vote-instructions { text-align: center; color: var(--text2); font-size: 0.85rem; margin-bottom: 24px; line-height: 1.6; }
+        .vote-category { margin-bottom: 28px; }
+        .vote-category-title { font-weight: 700; font-size: 0.85rem; color: var(--text2); margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+
+        .menu-card {
+            display: flex; align-items: center; gap: 14px;
+            background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm);
+            padding: 14px 16px; margin-bottom: 8px; transition: var(--transition);
+        }
+        .menu-card .menu-emoji { font-size: 1.5rem; flex-shrink: 0; width: 36px; text-align: center; }
+        .menu-card .menu-info { flex: 1; min-width: 0; }
+        .menu-card .menu-name { font-weight: 600; font-size: 0.92rem; }
+        .menu-card .menu-sub { font-size: 0.78rem; color: var(--text3); margin-top: 2px; }
+
+        .vote-btns { display: flex; gap: 6px; flex-shrink: 0; }
+        .vote-btn {
+            width: 38px; height: 38px; border-radius: 50%; border: 1.5px solid var(--border);
+            background: transparent; cursor: pointer; font-size: 1rem; display: flex;
+            align-items: center; justify-content: center; transition: var(--transition);
+        }
+        .vote-btn:hover { border-color: rgba(255,255,255,0.2); transform: scale(1.1); }
+        .vote-btn.like.active { border-color: var(--green); background: var(--green-bg); }
+        .vote-btn.dislike.active { border-color: var(--red); background: var(--red-bg); }
+
+        .allergy-section { margin-top: 28px; }
+        .allergy-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+        .allergy-chip {
+            padding: 7px 14px; border-radius: 50px; border: 1px solid var(--border);
+            background: transparent; color: var(--text2); font-family: 'Noto Sans KR', sans-serif;
+            font-size: 0.82rem; cursor: pointer; transition: var(--transition);
+        }
+        .allergy-chip:hover { border-color: rgba(255,255,255,0.15); }
+        .allergy-chip.selected { border-color: var(--red); color: var(--red); background: var(--red-bg); }
+
+        .submit-vote-area { margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--border); }
+
+        .result-banner { text-align: center; padding: 40px 0 20px; }
+        .result-banner .winner-emoji { font-size: 3.5rem; display: block; margin-bottom: 12px; }
+        .result-banner h2 { font-family: 'Black Han Sans', sans-serif; font-size: 2rem; letter-spacing: -1px; }
+        .result-banner p { color: var(--text2); font-size: 0.9rem; margin-top: 6px; }
+
+        .result-rank { margin-top: 24px; }
+        .rank-item {
+            display: flex; align-items: center; gap: 14px;
+            padding: 16px; background: var(--card); border: 1px solid var(--border);
+            border-radius: var(--radius-sm); margin-bottom: 8px; transition: var(--transition);
+        }
+        .rank-item:first-child { border-color: var(--orange); background: rgba(255,87,34,0.06); }
+        .rank-num {
+            width: 28px; height: 28px; border-radius: 50%; display: flex;
+            align-items: center; justify-content: center; font-weight: 800; font-size: 0.8rem;
+            background: var(--dark2); color: var(--text2); flex-shrink: 0;
+        }
+        .rank-item:first-child .rank-num { background: var(--orange); color: #fff; }
+        .rank-info { flex: 1; }
+        .rank-name { font-weight: 600; font-size: 0.95rem; }
+        .rank-votes { font-size: 0.78rem; color: var(--text3); margin-top: 2px; }
+        .rank-bar-wrap { width: 80px; height: 6px; background: var(--dark2); border-radius: 3px; overflow: hidden; flex-shrink: 0; }
+        .rank-bar { height: 100%; border-radius: 3px; background: var(--green); transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
+        .rank-item:first-child .rank-bar { background: var(--orange); }
+        .rank-score { font-weight: 700; font-size: 0.9rem; color: var(--text); min-width: 32px; text-align: right; }
+
+        .blocked-section { margin-top: 28px; }
+        .blocked-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 12px 16px; background: var(--red-bg); border: 1px solid rgba(255,23,68,0.15);
+            border-radius: var(--radius-sm); margin-bottom: 6px; font-size: 0.85rem; color: var(--red);
+        }
+
+        .result-actions { display: flex; gap: 10px; margin-top: 28px; }
+        .result-actions .btn { flex: 1; }
+
+        .demo-banner {
+            background: linear-gradient(135deg, rgba(255,87,34,0.1), rgba(255,214,0,0.05));
+            border: 1px solid rgba(255,87,34,0.2); border-radius: var(--radius-sm);
+            padding: 16px; margin-top: 20px; text-align: center;
+        }
+        .demo-banner p { font-size: 0.82rem; color: var(--text2); margin-bottom: 10px; line-height: 1.5; }
+        .demo-banner button { font-size: 0.85rem; padding: 10px 20px; }
+
+        @media (max-width: 400px) {
+            .vote-btns { gap: 4px; }
+            .vote-btn { width: 34px; height: 34px; }
+            .menu-card { padding: 12px; gap: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="topbar">
+    <div class="container topbar-inner">
+        <div class="topbar-brand" onclick="goHome()">🍽️ 같이먹자</div>
+        <div class="topbar-badge">그룹 메뉴 투표</div>
+    </div>
+</div>
+
+<!-- Home -->
+<div class="screen active" id="screenHome">
+    <div class="container">
+        <div class="hero">
+            <span class="hero-emoji">🤝</span>
+            <h1>같이 정하자,<br>오늘의 메뉴</h1>
+            <p>방을 만들고 링크를 공유하면<br>다 같이 투표해서 메뉴를 정할 수 있어요</p>
+        </div>
+        <div class="home-actions">
+            <button class="btn btn-primary btn-full btn-lg" onclick="showScreen('screenCreate')">✨ 방 만들기</button>
+            <div class="home-divider">또는 초대 코드로 참여</div>
+            <div class="join-input-group">
+                <input type="text" id="joinCodeInput" placeholder="초대 코드 입력 (예: ABC123)">
+                <button class="btn btn-secondary" onclick="joinRoom()">참여</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Room -->
+<div class="screen" id="screenCreate">
+    <div class="container">
+        <div style="padding-top:8px; margin-bottom:28px;">
+            <button class="btn btn-secondary" onclick="showScreen('screenHome')" style="padding:10px 16px; font-size:0.85rem;">← 돌아가기</button>
+        </div>
+        <h2 style="font-family:'Black Han Sans',sans-serif; font-size:1.5rem; margin-bottom:24px;">방 설정</h2>
+        <div class="card">
+            <div class="form-group">
+                <label class="form-label">방 이름</label>
+                <input class="form-input" id="roomNameInput" placeholder="예: 마케팅팀 점심" maxlength="20">
+            </div>
+            <div class="form-group">
+                <label class="form-label">지역 <small>(선택)</small></label>
+                <select class="form-select" id="regionSelect">
+                    <option value="">상관없음</option>
+                    <option value="강남/역삼">강남/역삼</option>
+                    <option value="홍대/합정">홍대/합정</option>
+                    <option value="종로/광화문">종로/광화문</option>
+                    <option value="여의도/마포">여의도/마포</option>
+                    <option value="성수/건대">성수/건대</option>
+                    <option value="판교/분당">판교/분당</option>
+                    <option value="기타">기타</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">예산</label>
+                <select class="form-select" id="budgetSelect">
+                    <option value="any">상관없음</option>
+                    <option value="~8,000원">~8,000원</option>
+                    <option value="8,000~15,000원">8,000~15,000원</option>
+                    <option value="15,000~25,000원">15,000~25,000원</option>
+                    <option value="25,000원~">25,000원 이상</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">카테고리 선택 <small>(투표에 포함할 메뉴)</small></label>
+                <div class="chip-group" id="categoryChips">
+                    <button class="chip selected" data-cat="korean">🍚 한식</button>
+                    <button class="chip selected" data-cat="chinese">🥡 중식</button>
+                    <button class="chip selected" data-cat="japanese">🍣 일식</button>
+                    <button class="chip selected" data-cat="western">🍝 양식</button>
+                    <button class="chip selected" data-cat="asian">🍜 아시안</button>
+                    <button class="chip selected" data-cat="bunsik">🍢 분식</button>
+                    <button class="chip selected" data-cat="fast">🍔 패스트푸드</button>
+                </div>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">제외 메뉴 <small>(쉼표로 구분)</small></label>
+                <input class="form-input" id="excludeInput" placeholder="예: 곱창, 번데기">
+                <div class="form-hint">이 메뉴는 투표 목록에서 제외됩니다</div>
+            </div>
+        </div>
+        <button class="btn btn-primary btn-full btn-lg" onclick="createRoom()" style="margin-top:8px;">🚀 방 만들기</button>
+    </div>
+</div>
+
+<!-- Vote -->
+<div class="screen" id="screenVote">
+    <div class="container">
+        <div class="room-header">
+            <div class="room-name" id="voteRoomName">-</div>
+            <div class="room-info" id="voteRoomInfo"></div>
+        </div>
+        <div class="room-code-bar">
+            <span style="font-size:0.8rem; color:var(--text3);">초대 코드</span>
+            <code id="roomCodeDisplay">-</code>
+            <button onclick="copyCode()">복사</button>
+            <button onclick="shareRoom()">공유</button>
+        </div>
+        <div class="participants-bar">
+            <div class="participants-avatars" id="participantsAvatars"></div>
+            <div class="participant-count" id="participantCount">0명 참여</div>
+        </div>
+        <div class="vote-instructions">
+            먹고 싶은 메뉴에는 <span style="color:var(--green);">👍</span>, 싫은 메뉴에는 <span style="color:var(--red);">👎</span> 를 눌러주세요<br>
+            <span style="font-size:0.8rem;">선택하지 않은 메뉴는 중립으로 처리됩니다</span>
+        </div>
+        <div id="voteMenuList"></div>
+        <div class="allergy-section">
+            <div class="section-title">⚠️ 알러지 / 못 먹는 재료</div>
+            <p style="font-size:0.82rem; color:var(--text3); margin-bottom: 10px;">선택한 재료가 포함된 메뉴는 결과에서 제외됩니다</p>
+            <div class="allergy-chips" id="allergyChips">
+                <button class="allergy-chip" data-allergy="우유">🥛 우유</button>
+                <button class="allergy-chip" data-allergy="계란">🥚 계란</button>
+                <button class="allergy-chip" data-allergy="밀">🌾 밀</button>
+                <button class="allergy-chip" data-allergy="갑각류">🦐 갑각류</button>
+                <button class="allergy-chip" data-allergy="땅콩">🥜 땅콩</button>
+                <button class="allergy-chip" data-allergy="대두">🫘 대두</button>
+                <button class="allergy-chip" data-allergy="돼지고기">🐷 돼지고기</button>
+                <button class="allergy-chip" data-allergy="소고기">🐂 소고기</button>
+                <button class="allergy-chip" data-allergy="생선">🐟 생선</button>
+                <button class="allergy-chip" data-allergy="조개류">🦪 조개류</button>
+            </div>
+        </div>
+        <div class="submit-vote-area">
+            <button class="btn btn-primary btn-full btn-lg" onclick="submitVote()">✅ 투표 완료</button>
+        </div>
+    </div>
+</div>
+
+<!-- Waiting -->
+<div class="screen" id="screenWait">
+    <div class="container">
+        <div class="room-header">
+            <div class="room-name" id="waitRoomName">-</div>
+            <div class="room-info" id="waitRoomInfo"></div>
+        </div>
+        <div class="room-code-bar">
+            <span style="font-size:0.8rem; color:var(--text3);">초대 코드</span>
+            <code id="waitCodeDisplay">-</code>
+            <button onclick="copyCode()">복사</button>
+            <button onclick="shareRoom()">공유</button>
+        </div>
+        <div class="participants-bar">
+            <div class="participants-avatars" id="waitAvatars"></div>
+            <div class="participant-count" id="waitParticipantCount">0명 참여</div>
+        </div>
+        <div class="card" style="text-align:center; padding:48px 24px;">
+            <div style="font-size:2.5rem; margin-bottom:16px;">⏳</div>
+            <h3 style="font-size:1.1rem; margin-bottom:8px;">투표 진행 중</h3>
+            <p style="color:var(--text2); font-size:0.88rem; line-height:1.6;">모든 참여자의 투표가 끝나면<br>아래 버튼으로 결과를 확인하세요</p>
+            <div style="margin-top:12px; font-size:0.82rem; color:var(--text3);" id="voteProgress">0 / 0 투표 완료</div>
+        </div>
+        <button class="btn btn-primary btn-full btn-lg" onclick="showResults()" style="margin-top:16px;">📊 결과 보기</button>
+        <p style="text-align:center; font-size:0.78rem; color:var(--text3); margin-top:10px;">아직 투표하지 않은 사람이 있어도 결과를 볼 수 있어요</p>
+        <div class="demo-banner">
+            <p>📌 <strong>발표용 데모</strong>: 아래 버튼을 누르면 가상의<br>참가자 3명이 자동으로 투표합니다</p>
+            <button class="btn btn-secondary" onclick="addDemoParticipants()">🤖 데모 참가자 추가</button>
+        </div>
+    </div>
+</div>
+
+<!-- Results -->
+<div class="screen" id="screenResult">
+    <div class="container">
+        <div class="result-banner">
+            <span class="winner-emoji" id="winnerEmoji">🏆</span>
+            <h2 id="winnerName">-</h2>
+            <p id="winnerSub">-</p>
+        </div>
+        <div class="section-title" style="margin-top:32px;">전체 순위</div>
+        <div class="result-rank" id="resultRank"></div>
+        <div class="blocked-section" id="blockedSection" style="display:none;">
+            <div class="section-title">🚫 제외된 메뉴 (알러지)</div>
+            <div id="blockedList"></div>
+        </div>
+        <div class="result-actions">
+            <button class="btn btn-secondary" onclick="resetAndGoHome()">🏠 처음으로</button>
+            <button class="btn btn-primary" onclick="shareResult()">📤 결과 공유</button>
+        </div>
+    </div>
+</div>
+
+<!-- Nickname Modal -->
+<div class="nickname-overlay" id="nicknameModal">
+    <div class="nickname-modal">
+        <h2>닉네임을 정해주세요</h2>
+        <p>투표 시 표시될 이름이에요</p>
+        <input type="text" id="nicknameInput" placeholder="예: 배고픈 김대리" maxlength="10">
+        <button class="btn btn-primary btn-full" onclick="confirmNickname()">확인</button>
+    </div>
+</div>
+
+<script>
+const MENU_DATA = {
+    korean: { label: '🍚 한식', items: [
+        { name: '김치찌개', emoji: '🍲', sub: '7,000~9,000원', allergens: ['대두','돼지고기'] },
+        { name: '된장찌개', emoji: '🫕', sub: '7,000~9,000원', allergens: ['대두'] },
+        { name: '제육볶음', emoji: '🌶️', sub: '8,000~10,000원', allergens: ['돼지고기','대두'] },
+        { name: '비빔밥', emoji: '🍚', sub: '8,000~10,000원', allergens: ['계란','대두'] },
+        { name: '삼겹살', emoji: '🥩', sub: '14,000~18,000원', allergens: ['돼지고기'] },
+        { name: '순대국밥', emoji: '🍲', sub: '8,000~10,000원', allergens: ['돼지고기'] },
+        { name: '불고기 정식', emoji: '🥘', sub: '10,000~13,000원', allergens: ['소고기','대두'] },
+        { name: '냉면', emoji: '🍜', sub: '9,000~12,000원', allergens: ['밀','계란'] },
+        { name: '칼국수', emoji: '🍜', sub: '8,000~10,000원', allergens: ['밀','갑각류'] },
+        { name: '감자탕', emoji: '🍲', sub: '25,000~35,000원(2-3인)', allergens: ['돼지고기'] },
+    ]},
+    chinese: { label: '🥡 중식', items: [
+        { name: '짜장면', emoji: '🍜', sub: '7,000~9,000원', allergens: ['밀','대두'] },
+        { name: '짬뽕', emoji: '🌶️', sub: '8,000~10,000원', allergens: ['밀','갑각류','조개류'] },
+        { name: '탕수육', emoji: '🍖', sub: '18,000~25,000원', allergens: ['밀','돼지고기'] },
+        { name: '마라탕', emoji: '🔥', sub: '10,000~15,000원', allergens: ['대두','갑각류'] },
+        { name: '마파두부', emoji: '🌶️', sub: '9,000~12,000원', allergens: ['대두','돼지고기'] },
+        { name: '볶음밥', emoji: '🍳', sub: '8,000~10,000원', allergens: ['계란'] },
+    ]},
+    japanese: { label: '🍣 일식', items: [
+        { name: '초밥', emoji: '🍣', sub: '12,000~20,000원', allergens: ['생선','대두'] },
+        { name: '라멘', emoji: '🍜', sub: '10,000~14,000원', allergens: ['밀','계란','돼지고기'] },
+        { name: '돈카츠', emoji: '🍖', sub: '10,000~15,000원', allergens: ['밀','돼지고기','계란'] },
+        { name: '우동', emoji: '🍜', sub: '8,000~11,000원', allergens: ['밀'] },
+        { name: '카레', emoji: '🍛', sub: '9,000~12,000원', allergens: ['밀','우유'] },
+        { name: '소바', emoji: '🍶', sub: '10,000~13,000원', allergens: [] },
+    ]},
+    western: { label: '🍝 양식', items: [
+        { name: '파스타', emoji: '🍝', sub: '12,000~18,000원', allergens: ['밀','우유'] },
+        { name: '피자', emoji: '🍕', sub: '15,000~25,000원', allergens: ['밀','우유'] },
+        { name: '스테이크', emoji: '🥩', sub: '20,000~35,000원', allergens: ['소고기'] },
+        { name: '햄버거 스테이크', emoji: '🍔', sub: '12,000~16,000원', allergens: ['소고기','밀','계란'] },
+        { name: '리조또', emoji: '🍚', sub: '13,000~18,000원', allergens: ['우유'] },
+        { name: '샐러드 보울', emoji: '🥗', sub: '10,000~14,000원', allergens: [] },
+    ]},
+    asian: { label: '🍜 아시안', items: [
+        { name: '쌀국수', emoji: '🍜', sub: '9,000~12,000원', allergens: ['생선'] },
+        { name: '팟타이', emoji: '🍤', sub: '10,000~13,000원', allergens: ['갑각류','땅콩','계란'] },
+        { name: '카오팟', emoji: '🍳', sub: '9,000~12,000원', allergens: ['계란'] },
+        { name: '분짜', emoji: '🥗', sub: '10,000~13,000원', allergens: ['돼지고기','생선'] },
+        { name: '인도 커리', emoji: '🍛', sub: '10,000~14,000원', allergens: ['우유'] },
+        { name: '포케 보울', emoji: '🐟', sub: '12,000~15,000원', allergens: ['생선','대두'] },
+    ]},
+    bunsik: { label: '🍢 분식', items: [
+        { name: '떡볶이', emoji: '🌶️', sub: '4,000~7,000원', allergens: ['밀'] },
+        { name: '김밥', emoji: '🍙', sub: '3,500~5,000원', allergens: ['계란'] },
+        { name: '라면', emoji: '🍜', sub: '4,000~5,000원', allergens: ['밀','계란'] },
+        { name: '순대', emoji: '🌭', sub: '4,000~6,000원', allergens: ['돼지고기'] },
+        { name: '만두', emoji: '🥟', sub: '4,000~7,000원', allergens: ['밀','돼지고기'] },
+    ]},
+    fast: { label: '🍔 패스트푸드', items: [
+        { name: '버거 세트', emoji: '🍔', sub: '7,000~12,000원', allergens: ['밀','우유','소고기'] },
+        { name: '치킨', emoji: '🍗', sub: '16,000~22,000원', allergens: ['밀'] },
+        { name: '타코', emoji: '🌮', sub: '8,000~12,000원', allergens: ['밀','우유'] },
+        { name: '서브웨이', emoji: '🥖', sub: '6,000~9,000원', allergens: ['밀'] },
+    ]}
+};
+
+const AVATAR_COLORS = ['#FF5722','#E91E63','#9C27B0','#3F51B5','#00BCD4','#4CAF50','#FF9800','#795548'];
+
+let currentRoom = null, myNickname = '', myVotes = {}, myAllergies = [], nicknameCallback = null;
+
+function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function goHome() { currentRoom = null; showScreen('screenHome'); }
+function resetAndGoHome() { currentRoom = null; myVotes = {}; myAllergies = []; showScreen('screenHome'); }
+
+function generateCode() {
+    const c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let r = '';
+    for (let i = 0; i < 6; i++) r += c[Math.floor(Math.random() * c.length)]; return r;
+}
+
+function createRoom() {
+    const name = document.getElementById('roomNameInput').value.trim() || '점심 투표';
+    const region = document.getElementById('regionSelect').value;
+    const budget = document.getElementById('budgetSelect').value;
+    const excludeRaw = document.getElementById('excludeInput').value;
+    const excludeList = excludeRaw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+    const selectedCats = [];
+    document.querySelectorAll('#categoryChips .chip.selected').forEach(c => selectedCats.push(c.dataset.cat));
+    if (selectedCats.length === 0) { alert('최소 1개 카테고리를 선택해주세요.'); return; }
+    const code = generateCode();
+    currentRoom = { code, name, region, budget, categories: selectedCats, exclude: excludeList, createdBy: '', participants: [], votes: {} };
+    askNickname(nick => { currentRoom.createdBy = nick; currentRoom.participants.push(nick); saveRoom(); enterVoteScreen(); });
+}
+
+function joinRoom() {
+    const code = document.getElementById('joinCodeInput').value.trim().toUpperCase();
+    if (!code) { alert('초대 코드를 입력해주세요.'); return; }
+    const room = loadRoom(code);
+    if (!room) { alert('해당 코드의 방을 찾을 수 없습니다.\n(같은 브라우저에서 만든 방만 참여 가능)'); return; }
+    currentRoom = room;
+    askNickname(nick => {
+        if (!currentRoom.participants.includes(nick)) currentRoom.participants.push(nick);
+        if (currentRoom.votes[nick]) { saveRoom(); showWaitScreen(); }
+        else { saveRoom(); enterVoteScreen(); }
+    });
+}
+
+function askNickname(cb) {
+    nicknameCallback = cb; document.getElementById('nicknameInput').value = '';
+    document.getElementById('nicknameModal').classList.add('show');
+    setTimeout(() => document.getElementById('nicknameInput').focus(), 200);
+}
+function confirmNickname() {
+    const n = document.getElementById('nicknameInput').value.trim();
+    if (!n) { alert('닉네임을 입력해주세요.'); return; }
+    myNickname = n; document.getElementById('nicknameModal').classList.remove('show');
+    if (nicknameCallback) nicknameCallback(n);
+}
+document.getElementById('nicknameInput').addEventListener('keydown', e => { if (e.key === 'Enter') confirmNickname(); });
+document.getElementById('joinCodeInput').addEventListener('keydown', e => { if (e.key === 'Enter') joinRoom(); });
+
+function enterVoteScreen() {
+    myVotes = {}; myAllergies = [];
+    document.getElementById('voteRoomName').textContent = currentRoom.name;
+    const parts = [];
+    if (currentRoom.region) parts.push('📍 ' + currentRoom.region);
+    if (currentRoom.budget && currentRoom.budget !== 'any') parts.push('💰 ' + currentRoom.budget);
+    document.getElementById('voteRoomInfo').innerHTML = parts.map(p => `<span>${p}</span>`).join('');
+    document.getElementById('roomCodeDisplay').textContent = currentRoom.code;
+    renderParticipants('participantsAvatars', 'participantCount');
+
+    const list = document.getElementById('voteMenuList'); list.innerHTML = '';
+    currentRoom.categories.forEach(catKey => {
+        const cat = MENU_DATA[catKey]; if (!cat) return;
+        const filtered = cat.items.filter(item => !currentRoom.exclude.some(ex => item.name.toLowerCase().includes(ex)));
+        if (filtered.length === 0) return;
+        const div = document.createElement('div'); div.className = 'vote-category';
+        div.innerHTML = `<div class="vote-category-title">${cat.label}</div>`;
+        filtered.forEach(item => {
+            const key = catKey + '::' + item.name;
+            const card = document.createElement('div'); card.className = 'menu-card';
+            card.innerHTML = `<div class="menu-emoji">${item.emoji}</div><div class="menu-info"><div class="menu-name">${item.name}</div><div class="menu-sub">${item.sub}</div></div><div class="vote-btns"><button class="vote-btn like" data-key="${key}" onclick="toggleVote('${key}','like',this)">👍</button><button class="vote-btn dislike" data-key="${key}" onclick="toggleVote('${key}','dislike',this)">👎</button></div>`;
+            div.appendChild(card);
+        });
+        list.appendChild(div);
+    });
+    document.querySelectorAll('#allergyChips .allergy-chip').forEach(c => c.classList.remove('selected'));
+    showScreen('screenVote');
+}
+
+function toggleVote(key, type, btn) {
+    const p = btn.parentElement, l = p.querySelector('.like'), d = p.querySelector('.dislike');
+    if (myVotes[key] === type) { myVotes[key] = null; l.classList.remove('active'); d.classList.remove('active'); }
+    else { myVotes[key] = type; l.classList.toggle('active', type === 'like'); d.classList.toggle('active', type === 'dislike'); }
+}
+
+document.querySelectorAll('#allergyChips .allergy-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+        chip.classList.toggle('selected');
+        const a = chip.dataset.allergy;
+        if (chip.classList.contains('selected')) { if (!myAllergies.includes(a)) myAllergies.push(a); }
+        else myAllergies = myAllergies.filter(x => x !== a);
+    });
+});
+document.querySelectorAll('#categoryChips .chip').forEach(c => c.addEventListener('click', () => c.classList.toggle('selected')));
+
+function submitVote() {
+    currentRoom.votes[myNickname] = { votes: { ...myVotes }, allergies: [...myAllergies] };
+    saveRoom(); showWaitScreen();
+}
+
+function showWaitScreen() {
+    document.getElementById('waitRoomName').textContent = currentRoom.name;
+    const parts = [];
+    if (currentRoom.region) parts.push('📍 ' + currentRoom.region);
+    if (currentRoom.budget && currentRoom.budget !== 'any') parts.push('💰 ' + currentRoom.budget);
+    document.getElementById('waitRoomInfo').innerHTML = parts.map(p => `<span>${p}</span>`).join('');
+    document.getElementById('waitCodeDisplay').textContent = currentRoom.code;
+    renderParticipants('waitAvatars', 'waitParticipantCount');
+    const vc = Object.keys(currentRoom.votes).length;
+    document.getElementById('voteProgress').textContent = `${vc} / ${currentRoom.participants.length} 투표 완료`;
+    showScreen('screenWait');
+}
+
+function showResults() {
+    const rd = loadRoom(currentRoom.code); if (rd) currentRoom = rd;
+    const allMenus = {};
+    currentRoom.categories.forEach(catKey => {
+        const cat = MENU_DATA[catKey]; if (!cat) return;
+        cat.items.forEach(item => {
+            if (currentRoom.exclude.some(ex => item.name.toLowerCase().includes(ex))) return;
+            const key = catKey + '::' + item.name;
+            allMenus[key] = { ...item, catKey, key, likes: 0, dislikes: 0, blocked: false, blockReasons: [] };
+        });
+    });
+    const allAllergies = new Set();
+    Object.values(currentRoom.votes).forEach(vd => {
+        Object.entries(vd.votes).forEach(([k, v]) => { if (!allMenus[k]) return; if (v === 'like') allMenus[k].likes++; if (v === 'dislike') allMenus[k].dislikes++; });
+        vd.allergies.forEach(a => allAllergies.add(a));
+    });
+    Object.values(allMenus).forEach(m => { m.allergens.forEach(a => { if (allAllergies.has(a)) { m.blocked = true; if (!m.blockReasons.includes(a)) m.blockReasons.push(a); } }); });
+
+    const available = Object.values(allMenus).filter(m => !m.blocked);
+    const blocked = Object.values(allMenus).filter(m => m.blocked);
+    available.sort((a, b) => { const sa = a.likes - a.dislikes, sb = b.likes - b.dislikes; return sb !== sa ? sb - sa : b.likes - a.likes; });
+
+    const w = available[0], tv = Object.keys(currentRoom.votes).length;
+    if (w) {
+        document.getElementById('winnerEmoji').textContent = w.emoji;
+        document.getElementById('winnerName').textContent = w.name;
+        document.getElementById('winnerSub').textContent = `👍 ${w.likes}명 찬성 · 👎 ${w.dislikes}명 반대 · ${tv}명 투표`;
+    } else {
+        document.getElementById('winnerEmoji').textContent = '😢';
+        document.getElementById('winnerName').textContent = '먹을 수 있는 메뉴가 없어요';
+        document.getElementById('winnerSub').textContent = '알러지와 제외 조건을 확인해주세요';
+    }
+
+    const maxS = available.length > 0 ? Math.max(available[0].likes - available[0].dislikes, 1) : 1;
+    const rk = document.getElementById('resultRank'); rk.innerHTML = '';
+    available.slice(0, 10).forEach((m, i) => {
+        const s = m.likes - m.dislikes, pct = Math.max((s / maxS) * 100, 5);
+        rk.innerHTML += `<div class="rank-item"><div class="rank-num">${i+1}</div><div style="font-size:1.3rem;flex-shrink:0;">${m.emoji}</div><div class="rank-info"><div class="rank-name">${m.name}</div><div class="rank-votes">👍${m.likes} 👎${m.dislikes}</div></div><div class="rank-bar-wrap"><div class="rank-bar" style="width:${pct}%"></div></div><div class="rank-score">${s>=0?'+':''}${s}</div></div>`;
+    });
+
+    const bs = document.getElementById('blockedSection'), bl = document.getElementById('blockedList');
+    if (blocked.length > 0) {
+        bs.style.display = 'block';
+        bl.innerHTML = blocked.map(m => `<div class="blocked-item"><span>${m.emoji} ${m.name}</span><span style="margin-left:auto;font-size:0.78rem;opacity:0.8;">알러지: ${m.blockReasons.join(', ')}</span></div>`).join('');
+    } else bs.style.display = 'none';
+    showScreen('screenResult');
+}
+
+function renderParticipants(cid, countId) {
+    const c = document.getElementById(cid), ct = document.getElementById(countId), p = currentRoom.participants;
+    c.innerHTML = p.slice(0, 6).map((n, i) => `<div class="avatar" style="background:${AVATAR_COLORS[i%AVATAR_COLORS.length]};z-index:${10-i};">${n.charAt(0)}</div>`).join('') + (p.length > 6 ? `<div class="avatar" style="background:var(--dark3);">+${p.length-6}</div>` : '');
+    ct.textContent = `${p.length}명 참여`;
+}
+
+function saveRoom() { if (!currentRoom) return; try { localStorage.setItem('room_' + currentRoom.code, JSON.stringify(currentRoom)); } catch(e) {} }
+function loadRoom(code) { try { const r = localStorage.getItem('room_' + code); return r ? JSON.parse(r) : null; } catch(e) { return null; } }
+
+function copyCode() { if (!currentRoom) return; navigator.clipboard.writeText(currentRoom.code).then(() => showToast('초대 코드가 복사되었습니다!')).catch(() => {}); }
+function shareRoom() {
+    if (!currentRoom) return;
+    const t = `🍽️ 같이먹자! "${currentRoom.name}" 방에 초대합니다.\n초대 코드: ${currentRoom.code}\n\n👉 ${location.origin}${location.pathname}#join=${currentRoom.code}`;
+    if (navigator.share) navigator.share({ title: '같이먹자', text: t }).catch(() => {});
+    else navigator.clipboard.writeText(t).then(() => showToast('공유 텍스트가 복사되었습니다!')).catch(() => {});
+}
+function shareResult() {
+    const w = document.getElementById('winnerName').textContent;
+    const t = `🏆 오늘의 메뉴: ${w}!\n"${currentRoom.name}" 투표 결과입니다.\n같이먹자에서 투표했어요 🍽️`;
+    if (navigator.share) navigator.share({ title: '같이먹자 결과', text: t }).catch(() => {});
+    else navigator.clipboard.writeText(t).then(() => showToast('결과가 복사되었습니다!')).catch(() => {});
+}
+
+function showToast(msg) {
+    const t = document.createElement('div'); t.textContent = msg;
+    Object.assign(t.style, { position:'fixed',bottom:'80px',left:'50%',transform:'translateX(-50%)',background:'#fff',color:'#1B1B1F',padding:'12px 24px',borderRadius:'50px',fontSize:'0.88rem',fontWeight:'600',zIndex:'9999',boxShadow:'0 4px 20px rgba(0,0,0,0.3)',animation:'fadeUp 0.3s ease',fontFamily:"'Noto Sans KR',sans-serif" });
+    document.body.appendChild(t);
+    setTimeout(() => { t.style.opacity='0'; t.style.transition='opacity 0.3s'; }, 2000);
+    setTimeout(() => t.remove(), 2500);
+}
+
+function addDemoParticipants() {
+    if (!currentRoom) return;
+    const names = ['지민','수현','민우'];
+    const keys = [];
+    currentRoom.categories.forEach(ck => { const c = MENU_DATA[ck]; if (!c) return; c.items.forEach(item => { if (!currentRoom.exclude.some(ex => item.name.toLowerCase().includes(ex))) keys.push(ck+'::'+item.name); }); });
+    names.forEach(name => {
+        if (!currentRoom.participants.includes(name)) currentRoom.participants.push(name);
+        const v = {}; keys.forEach(k => { const r = Math.random(); if (r < 0.3) v[k] = 'like'; else if (r < 0.45) v[k] = 'dislike'; });
+        currentRoom.votes[name] = { votes: v, allergies: Math.random() < 0.3 ? ['갑각류'] : [] };
+    });
+    saveRoom(); renderParticipants('waitAvatars','waitParticipantCount');
+    document.getElementById('voteProgress').textContent = `${Object.keys(currentRoom.votes).length} / ${currentRoom.participants.length} 투표 완료`;
+    showToast('데모 참가자 3명이 투표했습니다!');
+}
+
+// URL hash join
+window.addEventListener('DOMContentLoaded', () => {
+    const h = location.hash;
+    if (h.startsWith('#join=')) {
+        const code = h.replace('#join=','').toUpperCase(); location.hash = '';
+        const room = loadRoom(code);
+        if (room) { currentRoom = room; askNickname(nick => { if (!currentRoom.participants.includes(nick)) currentRoom.participants.push(nick); if (currentRoom.votes[nick]) { saveRoom(); showWaitScreen(); } else { saveRoom(); enterVoteScreen(); } }); }
+        else { document.getElementById('joinCodeInput').value = code; alert('해당 방을 찾을 수 없습니다. 같은 브라우저에서 만든 방만 참여할 수 있어요.'); }
+    }
+});
+</script>
+</body>
+</html>
